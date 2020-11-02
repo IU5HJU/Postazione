@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+	<head>
+		<title>Gestione remota IR5xxx</title>
+		<link rel="stylesheet" href='../static/stylepostazione.css'/>
+		<meta http-equiv="refresh" content="5;url=http://iu5hju.ddns.net:83/">
+	</head>
+
+	<body>
+	
+		<h1>Controlli Ingressi/Uscite <a href='/logout'>Logout</a></h1>
+		<br>
+		
+		<table class="cinereousTable">
+			<thead>
+				<tr>
+					<td>ID</td>
+					<td>Descrizione</td>
+					<td>Stato</td>
+					<td>ON</td>
+					<td>OFF</td>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>17</td>
+					<td>GPIO 17 Uscita</td>
+					<td>{{ GPIO17  }}</td>
+					<td><a href="/GPIO17/on" class="button">ACCENDI</a></td>
+					<td><a href="/GPIO17/off"class="button">SPEGNI</a></td>
+				</tr>
+				<tr>
+					<td>18</td>
+					<td>GPIO 18 Uscita</td>
+					<td>{{ GPIO18  }}</td>
+					<td><a href="/GPIO18/on" class="button">ACCENDI</a> </td>
+					<td><a href="/GPIO18/off"class="button">SPEGNI</a></td>
+				</tr>
+				<tr>
+					<td>25</td>
+					<td>GPIO 25 Uscita</td>
+					<td>{{ GPIO25  }}</td>
+					<td><a href="/GPIO25/on" class="button">ACCENDI</a>  </td>
+					<td><a href="/GPIO25/off"class="button">SPEGNI</a></td>
+					</tr>
+				<tr>
+					<td>24</td>
+					<td>GPIO 24 Uscita</td>
+					<td>{{ GPIO24  }}</td>
+					<td><a href="/GPIO24/on" class="button">ACCENDI</a>  </td>
+					<td><a href="/GPIO24/off"class="button">SPEGNI</a></td>
+					</tr>
+				<tr>
+					<td>23</td>
+					<td>GPIO 23 Uscita</td>
+					<td>{{ GPIO23  }}</td>
+					<td><a href="/GPIO23/on" class="button">ACCENDI</a>  </td>
+					<td><a href="/GPIO23/off"class="button">SPEGNI</a></td>
+				</tr>
+				<tr>
+					<td>21</td>
+					<td>GPIO 21 Digitale</td>
+					<td>{{ GPIO21  }}</td>
+					<td colspan="2"><b>{{ GPIO21  }}</td>
+				</tr>
+				<tr>
+					<td>16</td>
+					<td>GPIO 16 Digitale</td>
+					<td>{{ GPIO16  }}</td>
+					<td colspan="2"><b>{{ GPIO16  }}</td>
+				</tr>
+				<tr>
+					<td>12</td>
+					<td>GPIO 12 Digitale</td>
+					<td>{{ GPIO12  }}</td>
+					<td colspan="2"><b>{{ GPIO12  }}</td>
+				</tr>
+				<tr>
+					<td>7</td>
+					<td>GPIO 7 Digitale</td>
+					<td>{{ GPIO7  }}</td>
+					<td colspan="2"><b>{{ GPIO7  }}</td>
+				</tr>
+				<tr>
+					<td>8</td>
+					<td>GPIO 20 Digitale</td>
+					<td>{{ GPIO20  }}</td>
+					<td colspan="2"><b>{{ GPIO20  }}</td>
+				</tr>
+				<tr>
+					<td>26</td>
+					<td>GPIO 26 Libero</td>
+					<td>{{ GPIO26  }}</td>
+					<td colspan="2"><b>{{ GPIO26  }}</td>
+				</tr>
+				<tr>
+					<td>13</td>
+					<td>GPIO 13 Libero</td>
+					<td>{{ GPIO13  }}</td>
+					<td colspan="2"><b>{{ GPIO13  }}</td>
+				</tr>
+				<tr>
+					<td>6</td>
+					<td>GPIO 6 Libero</td>
+					<td>{{ GPIO6  }}</td>
+					<td colspan="2"><b>{{ GPIO6  }}</td>
+				</tr>
+				<tr>
+					<td>5</td>
+					<td>GPIO 5 Libero</td>
+					<td>{{ GPIO5  }}</td>
+					<td colspan="2"><b>{{ GPIO5  }}</td>
+				</tr>
+				<tr>
+					<td>2</td>
+					<td>GPIO 2 Libero</td>
+					<td>{{ GPIO2  }}</td>
+					<td colspan="2"><b>{{ GPIO2  }}</td>
+				</tr>
+				<tr>
+					<td>3</td>
+					<td>GPIO 3 Libero</td>
+					<td>{{ GPIO3  }}</td>
+					<td colspan="2"><b>{{ GPIO3  }}</td>
+				</tr>
+				<tr>
+					<td>4</td>
+					<td>TEMPERATURA 1</td>
+					<td colspan="3"><b>{{ temp_c1  }} &deg;C</B></td>
+				</tr>
+				<tr>
+					<td>5</td>
+					<td>TEMPERATURA 2</td>
+					<td colspan="3"><b>{{ temp_c2  }} &deg;C</B></td>
+				</tr>					
+				<tr>
+					<td>6</td>
+					<td>Volt 1</td>
+					<td colspan="3"><b>{{ volt0}} V</B></td>
+				</tr>
+				<tr>
+					<td>7</td>
+					<td>Volt 2</td>
+					<td colspan="3"><b>{{ volt1}} V</B></td>
+				</tr>				
+				<tr>
+					<td>8</td>
+					<td>Volt 3</td>
+					<td colspan="3"><b>{{ volt2}} V</B></td>
+				</tr>
+				<tr>
+					<td>9</td>
+					<td>Volt 4</td>
+					<td colspan="3"><b>{{ volt3}} V</B></td>
+				</tr>				
+			</tbody>
+		</table>
+		<br>
+		<h3>Hardware e Software realizzati da IZ5FSN, IW5ECI, IU5HJU</h3>
+        
+	</body>
+</html>
