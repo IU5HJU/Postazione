@@ -308,12 +308,9 @@ def read_temp(id_sonda):
 
 ##################################### BOT telegram ###############################################
 
-#admin_id = 0000000 # Inserisci il chat id di chi deve ricevere il messagio
-#admin_id= 42805596 #Daniela
-#admin_id= 675020453 #Michele
-admin_id = -409970193 #Gruppo_prove fare attenzione al segno meno prima del numero
+admin_id = -xxxxxxxxxxx #Gruppo_prove fare attenzione al segno meno prima del numero
 
-TOKEN = '1294595580:AAHg3st_u__XV9O5jaQVSXc7ngrVsIiI7pI'
+TOKEN = 'xxxxxxxxxxxxx'
 
 #INPIN = 21
 
