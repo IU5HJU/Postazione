@@ -1,0 +1,651 @@
+#!/usr/bin/env python3
+'''
+    Controllo Postazione tramite le GPIO del Raspberry Pi
+    Maggio 2020
+
+'''
+
+import math
+import RPi.GPIO as GPIO
+from flask import Flask, flash, redirect, render_template, request, session, abort
+import glob
+import time
+import datetime
+import telepot
+from telepot.loop import MessageLoop #telegram
+from pprint import pprint #telegram
+
+#tastiera telegram
+from telepot.loop import MessageLoop
+from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
+import os
+
+#Lettura tensione tramite MCP 3008
+import Adafruit_GPIO.SPI as SPI
+import Adafruit_MCP3008
+
+app = Flask(__name__)
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+
+#Definizione degli ingressi GPIO Digitali
+GPIO21 = 21
+GPIO16 = 16
+GPIO12 = 12
+GPIO7 = 7
+GPIO20 = 20
+
+#Definizione degli ingressi GPIO usati per MCP 3008 e quindi non utilizzabili
+#GPIO = 11
+#GPIO = 9
+#GPIO = 10
+#GPIO = 8
+
+#Definizione degli ingressi GPIO liberi
+GPIO26 = 26
+GPIO13 = 13
+GPIO6 = 6
+GPIO5 = 5
+GPIO2 = 2
+GPIO3 = 3
+
+#Definizione deglle uscite GPIO
+GPIO17 = 17
+GPIO18 = 18
+GPIO25 = 25
+GPIO24 = 24
+GPIO23 = 23
+
+#initialize GPIO status variables
+GPIO21Sts = 0
+GPIO16Sts = 0
+GPIO12Sts = 0
+GPIO7Sts = 0
+GPIO20Sts = 0
+
+GPIO26Sts = 0
+GPIO13Sts = 0
+GPIO6Sts = 0
+GPIO5Sts = 0
+GPIO2Sts = 0
+GPIO3Sts = 0
+
+temp_c1 = 0
+temp_c2 = 0
+
+#variabile per lettura tensione
+VALORI = [0.0, 0.0, 0.0, 0.0]
+
+# Definizione Ingressi
+GPIO.setup(GPIO21, GPIO.IN)
+GPIO.setup(GPIO16, GPIO.IN)
+GPIO.setup(GPIO12, GPIO.IN)
+GPIO.setup(GPIO7, GPIO.IN)
+GPIO.setup(GPIO20, GPIO.IN)
+
+GPIO.setup(GPIO26, GPIO.IN)
+GPIO.setup(GPIO13, GPIO.IN)
+GPIO.setup(GPIO6, GPIO.IN)
+GPIO.setup(GPIO5, GPIO.IN)
+GPIO.setup(GPIO2, GPIO.IN)
+GPIO.setup(GPIO3, GPIO.IN)
+
+
+# Definizione Uscite
+GPIO.setup(GPIO17, GPIO.OUT)
+GPIO.setup(GPIO18, GPIO.OUT)
+GPIO.setup(GPIO25, GPIO.OUT)
+GPIO.setup(GPIO24, GPIO.OUT)
+GPIO.setup(GPIO23, GPIO.OUT)
+
+# Spegni le uscite
+GPIO.output(GPIO17, GPIO.LOW)
+GPIO.output(GPIO18, GPIO.LOW)
+GPIO.output(GPIO25, GPIO.LOW)
+GPIO.output(GPIO24, GPIO.LOW)
+GPIO.output(GPIO23, GPIO.LOW)
+
+#cambiando questo valore si tara la lettura della tensione
+VAL_TENSIONE = 14.6
+
+#gestione tensione
+SPI_PORT = 0
+SPI_DEVICE = 0
+mcp = Adafruit_MCP3008.MCP3008(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE))
+
+######################### password ###########################
+
+@app.route('/')
+def home():
+    if not session.get('logged_in'):
+        return render_template('login.html')
+    else:
+        #return "Ciao Michele! <a href='/logout'>Logout</a>"
+        #return "<a href='/logout'>Logout</a>"
+        
+        #lettura valori tensione ogni volta che si aggiorna la pagina web
+        valori = [0.0, 0.0, 0.0, 0.0]
+        for i in range(4):
+            valori[i] = mcp.read_adc(i)
+        #print("ECCO QUI LE ACQUISIZIONI: ", valori)
+        VALORI[0] = round(((valori[0] * VAL_TENSIONE) / 999), 1)
+        VALORI[1] = round(((valori[1] * VAL_TENSIONE) / 999), 1)
+        VALORI[2] = round(((valori[2] * VAL_TENSIONE) / 999), 1)
+        VALORI[3] = round(((valori[3] * VAL_TENSIONE) / 999), 1)
+        #print("ECCO QUI ACQUISIZIONE: ", volt1_rem, volt2_rem, volt3_rem, volt4_rem)
+        return index()
+
+@app.route('/login', methods=['POST'])
+def do_admin_login():
+    if request.form['password'] == 'admin' and request.form['username'] == 'admin':
+        session['logged_in'] = True
+    else:
+        flash('wrong password!')
+    return home()
+
+@app.route("/logout")
+def logout():
+        session['logged_in'] = False
+        return home()
+
+########################## fine password #####################
+
+@app.route("/GPIO")
+def index():
+    # Read GPIO Status
+    GPIO17Sts = GPIO.input(GPIO17)
+    GPIO18Sts = GPIO.input(GPIO18)
+    GPIO25Sts = GPIO.input(GPIO25)
+    GPIO24Sts = GPIO.input(GPIO24)
+    GPIO23Sts = GPIO.input(GPIO23)
+
+    GPIO21Sts = GPIO.input(GPIO21)
+    GPIO16Sts = GPIO.input(GPIO16)
+    GPIO12Sts = GPIO.input(GPIO12)
+    GPIO7Sts = GPIO.input(GPIO7)
+    GPIO20Sts = GPIO.input(GPIO20)
+
+    GPIO26Sts = GPIO.input(GPIO26)
+    GPIO13Sts = GPIO.input(GPIO13)
+    GPIO6Sts = GPIO.input(GPIO6)
+    GPIO5Sts = GPIO.input(GPIO5)
+    GPIO2Sts = GPIO.input(GPIO2)
+    GPIO3Sts = GPIO.input(GPIO3)
+
+    temp_c1 = str(round(read_temp('28-000001393c1f'),2))
+    temp_c2 = str(round(read_temp('28-00000138f069'),2))
+
+    print("ECCO QUI ACQUISIZIONE (dentro funzione): ", VALORI[0], VALORI[1], VALORI[2], VALORI[3]) #lettura tensione
+
+    templateData = {
+            'GPIO17'  : GPIO17Sts,
+            'GPIO18'  : GPIO18Sts,
+            'GPIO25'  : GPIO25Sts,
+            'GPIO24'  : GPIO24Sts,
+            'GPIO23'  : GPIO23Sts,
+
+            'GPIO21'  : GPIO21Sts,
+            'GPIO16'  : GPIO16Sts,
+            'GPIO12'  : GPIO12Sts,
+            'GPIO7'  : GPIO7Sts,
+            'GPIO20'  : GPIO20Sts,
+
+            'GPIO26'  : GPIO26Sts,
+            'GPIO13'  : GPIO13Sts,
+            'GPIO6'  : GPIO6Sts,
+            'GPIO5'  : GPIO5Sts,
+            'GPIO2'  : GPIO2Sts,
+            'GPIO3'  : GPIO3Sts,
+            
+            'temp_c1' : temp_c1,
+            'temp_c2' : temp_c2,
+
+            'volt0' : VALORI[0],
+            'volt1' : VALORI[1],
+            'volt2' : VALORI[2],
+            'volt3' : VALORI[3]
+        }
+
+    return render_template('indexpostazione.html', **templateData)
+
+@app.route("/<deviceName>/<action>")
+def action(deviceName, action):
+    if deviceName == 'GPIO17':
+        actuator = GPIO17
+    if deviceName == 'GPIO18':
+        actuator = GPIO18
+    if deviceName == 'GPIO25':
+        actuator = GPIO25
+    if deviceName == 'GPIO24':
+        actuator = GPIO24
+    if deviceName == 'GPIO23':
+        actuator = GPIO23
+
+    if action == "on":
+        GPIO.output(actuator, GPIO.HIGH)
+    if action == "off":
+        GPIO.output(actuator, GPIO.LOW)
+
+    GPIO17Sts = GPIO.input(GPIO17)
+    GPIO18Sts = GPIO.input(GPIO18)
+    GPIO25Sts = GPIO.input(GPIO25)
+    GPIO24Sts = GPIO.input(GPIO24)
+    GPIO23Sts = GPIO.input(GPIO23)
+
+    GPIO21Sts = GPIO.input(GPIO21)
+    GPIO16Sts = GPIO.input(GPIO16)
+    GPIO12Sts = GPIO.input(GPIO12)
+    GPIO7Sts = GPIO.input(GPIO7)
+    GPIO20Sts = GPIO.input(GPIO20)
+
+    GPIO26Sts = GPIO.input(GPIO26)
+    GPIO13Sts = GPIO.input(GPIO13)
+    GPIO6Sts = GPIO.input(GPIO6)
+    GPIO5Sts = GPIO.input(GPIO5)
+    GPIO2Sts = GPIO.input(GPIO2)
+    GPIO3Sts = GPIO.input(GPIO3)
+
+    temp_c1 = str(round(read_temp('28-000001393c1f'),2))
+    temp_c2 = str(round(read_temp('28-00000138f069'),2))
+    
+    templateData = {
+            'GPIO17'  : GPIO17Sts,
+            'GPIO18'  : GPIO18Sts,
+            'GPIO25'  : GPIO25Sts,
+            'GPIO24'  : GPIO24Sts,
+            'GPIO23'  : GPIO23Sts,
+
+            'GPIO21'  : GPIO21Sts,
+            'GPIO16'  : GPIO16Sts,
+            'GPIO12'  : GPIO12Sts,
+            'GPIO7'  : GPIO7Sts,
+            'GPIO20'  : GPIO20Sts,
+
+            'GPIO26'  : GPIO26Sts,
+            'GPIO13'  : GPIO13Sts,
+            'GPIO6'  : GPIO6Sts,
+            'GPIO5'  : GPIO5Sts,
+            'GPIO2'  : GPIO2Sts,
+            'GPIO3'  : GPIO3Sts,
+            
+            'temp_c1' : temp_c1,
+            'temp_c2' : temp_c2,
+
+            'volt0' : VALORI[0],
+            'volt1' : VALORI[1],
+            'volt2' : VALORI[2],
+            'volt3' : VALORI[3]
+    }
+
+    return render_template('indexpostazione.html', **templateData)
+
+#lettura temperatura
+
+@app.route("/")
+
+def read_temp_raw(id_sonda):
+    base_dir = '/sys/bus/w1/devices/'
+    device_folder = glob.glob(base_dir + id_sonda)[0]
+    device_file = device_folder + '/w1_slave'
+
+    f = open(device_file, 'r')
+    lines = f.readlines()
+    f.close()
+    return lines
+
+def read_temp(id_sonda):
+    lines = read_temp_raw(id_sonda)
+    while lines[0].strip()[-3:] != 'YES':
+        # time.sleep(0.2)
+        lines = read_temp_raw(id_sonda)
+    equals_pos = lines[1].find('t=')
+    if equals_pos != -1:
+        temp_string = lines[1][equals_pos+2:]
+        temp_c = float(temp_string) / 1000.0
+    return temp_c
+
+
+##################################### BOT telegram ###############################################
+
+#admin_id = 0000000 # Inserisci il chat id di chi deve ricevere il messagio
+#admin_id= 42805596 #Daniela
+#admin_id= 675020453 #Michele
+admin_id = -409970193 #Gruppo_prove fare attenzione al segno meno prima del numero
+
+TOKEN = '1294595580:AAHg3st_u__XV9O5jaQVSXc7ngrVsIiI7pI'
+
+#INPIN = 21
+
+#GPIO.setmode(GPIO.BCM)
+#GPIO.setup(INPIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+def on_chat_message(msg):
+    pprint(msg) #display del messaggio che manda l'utente
+    content_type, chat_type, chat_id = telepot.glance(msg) #get dei par. della conver. e del tipo di messaggio
+
+    command = msg['text'] #get del comando inviato
+    
+    if command == '/start':
+        bot.sendMessage(chat_id, 'Benvenuti da: IZ5FSN Luca, IW5ECI Federico, IU5HJU Michele, Francesca, Franco')
+    
+    elif command == '/reflector':
+        bot.sendMessage(chat_id, 'Lista dei YSF Reflector C4FM')
+        bot.sendMessage(chat_id, '#54102 ARI Vinci')
+        bot.sendMessage(chat_id, '#26045 Multiprotocollo')
+        bot.sendMessage(chat_id, '#79445 NXDN')
+        bot.sendMessage(chat_id, '#48042 Cluster GRF')
+    elif command == '/info':
+        bot.sendMessage(chat_id, 'Queto è un sistema SPERIMENTALE per il monitoraggio di un Ripetitore Radioamatoriale realizzato da: IZ5FSN Luca, IW5ECI Federico, IU5HJU Michele. Vuole essere anche un blocco note dove trovare i dati relativi alle frequenze dei ripetitori C4FM Toscani e gli ID degli YSFReflector. Ringrazio Francesca, studentessa di Ingegneria Elettronica che supervisiona il nostro progetto e non per ultimo ringrazio Ing. Franco per la simpatica collaborazione. info: iu5hju@gmail.com')
+    elif command == '/ripetitori':
+        bot.sendMessage(chat_id, 'SAN BARONTO 430.600 +5000 DCS 023 YSF')
+        bot.sendMessage(chat_id, 'MONTE SERRA 430.550 +5000 T 79.7 YSF')
+        bot.sendMessage(chat_id, 'MOMIGNO 430.575 +5000 T 79.7 YSF')
+        bot.sendMessage(chat_id, 'INCONTRO 430.387,5 +1600 T 79.7 YSF')
+        bot.sendMessage(chat_id, 'MONTE GIOVI 430.825 +5000 T 79.7 YSF')
+        bot.sendMessage(chat_id, 'GROSSETO 430.012,5 +5000 T 79.7 YSF')
+        #bot.sendMessage(chat_id, 'IZ5IOF-N 144.725 simplex Montaione YSF')
+        bot.sendMessage(chat_id, 'IK5UIK-N 144.750 simplex Montelupo YSF')
+    
+    #elif command == '/2020':
+     #   bot.sendMessage(chat_id, last_name, 'Lista comandi privati')
+        
+    elif command == '/2020':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Ecco la lista  dei comandi privati:'%name)
+        
+        bot.sendMessage(chat_id, '/temp1 = Temperatura 1')
+        bot.sendMessage(chat_id, '/temp2 = Temperatura 2')
+        bot.sendMessage(chat_id, '/volts = Lettura Tensioni')
+        bot.sendMessage(chat_id, '/GPIO17 = Stato Uscita 17')
+        bot.sendMessage(chat_id, '/GPIO18 = Stato Uscita 18')
+        bot.sendMessage(chat_id, '/GPIO25 = Stato Uscita 25')
+        bot.sendMessage(chat_id, '/GPIO24 = Stato Uscita 24')
+        bot.sendMessage(chat_id, '/GPIO23 = Stato Uscita 23')
+        bot.sendMessage(chat_id, '/tastiera = prova la tastiera')
+    
+    elif command == '/temp1':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Ecco la temperatura della sonda 1:'%name)
+        bot.sendMessage(chat_id, read_temp('28-000001393c1f'))
+    
+    elif command == '/temp2':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Ecco la temperatura della sonda 2:'%name)
+        bot.sendMessage(chat_id, read_temp('28-00000138f069'))
+
+    elif command == '/volts':
+        valori = [0.0, 0.0, 0.0, 0.0]
+        for i in range(4):
+            valori[i] = mcp.read_adc(i)
+        #print("ECCO QUI ACQUISIZIONE: ", valori)
+        VALORI[0] = round(((valori[0] * VAL_TENSIONE) / 999), 1)
+        VALORI[1] = round(((valori[1] * VAL_TENSIONE) / 999), 1)
+        VALORI[2] = round(((valori[2] * VAL_TENSIONE) / 999), 1)
+        VALORI[3] = round(((valori[3] * VAL_TENSIONE) / 999), 1)
+        
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Ecco le Tensioni:' %name)
+        #bot.sendMessage(chat_id, 'Ciao %s, ecco la tensione 0:' %name)
+        bot.sendMessage(chat_id, 'Ecco la tensione 0:')
+        bot.sendMessage(chat_id, VALORI[0])
+        #bot.sendMessage(chat_id, 'Ciao %s, ecco la tensione 1:' %name)
+        bot.sendMessage(chat_id, 'Ecco la tensione 1:')
+        bot.sendMessage(chat_id, VALORI[1])
+        #bot.sendMessage(chat_id, 'Ciao %s, ecco la tensione 2:' %name)
+        bot.sendMessage(chat_id, 'Ecco la tensione 2:')
+        bot.sendMessage(chat_id, VALORI[2])
+        #bot.sendMessage(chat_id, 'Ciao %s, ecco la tensione 3:' %name)
+        bot.sendMessage(chat_id, 'Ecco la tensione 3:')
+        bot.sendMessage(chat_id, VALORI[3])
+
+# Uscite       
+    elif command == '/GPIO17':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Ecco lo stato del relè 17:'%name)
+        bot.sendMessage(chat_id, GPIO.input(GPIO17))
+    elif command == '/GPIO18':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Ecco lo stato del relè 18:'%name)
+        bot.sendMessage(chat_id, GPIO.input(GPIO18))
+    elif command == '/GPIO25':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Ecco lo stato del relè 25:'%name)
+        bot.sendMessage(chat_id, GPIO.input(GPIO25))
+    elif command == '/GPIO24':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Ecco lo stato del relè 24:'%name)
+        bot.sendMessage(chat_id, GPIO.input(GPIO24))
+    elif command == '/GPIO23':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Ecco lo stato del relè 23:'%name)
+        bot.sendMessage(chat_id, GPIO.input(GPIO23))
+        
+#comando uscite
+    elif command == '/GPIO17ON':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Hai attivato il relè 17'%name)
+        bot.sendMessage(chat_id, GPIO.output(GPIO17,GPIO.HIGH))
+        
+    elif command =='/GPIO17OFF':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Hai disattivato il relè 17'%name)
+        bot.sendMessage(chat_id, GPIO.output(GPIO17,GPIO.LOW))
+        
+    elif command == '/GPIO18ON':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Hai attivato il relè 18'%name)
+        bot.sendMessage(chat_id, GPIO.output(GPIO18,GPIO.HIGH))
+       
+    elif command =='/GPIO18OFF':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Hai disattivato il relè 18'%name)
+        bot.sendMessage(chat_id, GPIO.output(GPIO18,GPIO.LOW))
+
+    elif command == '/GPIO25ON':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Hai attivato il relè 25'%name)
+        bot.sendMessage(chat_id, GPIO.output(GPIO25,GPIO.HIGH))
+        
+    elif command =='/GPIO25OFF':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Hai disattivato il relè 25'%name)
+        bot.sendMessage(chat_id, GPIO.output(GPIO25,GPIO.LOW))
+        
+    elif command == '/GPIO24ON':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Hai attivato il relè 24'%name)
+        bot.sendMessage(chat_id, GPIO.output(GPIO24,GPIO.HIGH))
+        
+    elif command =='/GPIO24OFF':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Hai disattivato il relè 24'%name)
+        bot.sendMessage(chat_id, GPIO.output(GPIO24,GPIO.LOW))
+        
+    elif command == '/GPIO23ON':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Hai attivato il relè 23'%name)
+        bot.sendMessage(chat_id, GPIO.output(GPIO23,GPIO.HIGH))
+        
+    elif command =='/GPIO23OFF':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        bot.sendMessage(chat_id, 'Ciao %s, Hai disattivato il relè 23'%name)
+        bot.sendMessage(chat_id, GPIO.output(GPIO23,GPIO.LOW))
+        
+
+#tatiera telegram
+        
+    elif command == '/tastiera':
+        name = msg["from"]["first_name"]
+        txt = msg['text']
+        #bot.sendMessage(chat_id, 'Ciao %s, Ecco la tastiera:'%name, reply_markup=keyboard)
+        
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text='Stato GPIO17', callback_data='GPIO17'),
+                    InlineKeyboardButton(text='Stato GPIO18', callback_data='GPIO18')],
+                    [InlineKeyboardButton(text='Stato GPIO25', callback_data='GPIO25'),
+                    InlineKeyboardButton(text='Stato GPIO24', callback_data='GPIO24')],
+                    [InlineKeyboardButton(text='Stato GPIO23', callback_data='GPIO23')],
+                    
+                    [InlineKeyboardButton(text='ON GPIO17', callback_data='GPIO17ON'),
+                    InlineKeyboardButton(text='ON GPIO18', callback_data='GPIO18ON')],
+                    [InlineKeyboardButton(text='ON GPIO25', callback_data='GPIO25ON'),
+                    InlineKeyboardButton(text='ON GPIO24', callback_data='GPIO24ON')],
+                    [InlineKeyboardButton(text='ON GPIO23', callback_data='GPIO23ON')],
+                    
+                    [InlineKeyboardButton(text='OFF GPIO17', callback_data='GPIO17OFF'),
+                    InlineKeyboardButton(text='OFF GPIO18', callback_data='GPIO18OFF')],
+                    [InlineKeyboardButton(text='OFF GPIO25', callback_data='GPIO25OFF'),
+                    InlineKeyboardButton(text='OFF GPIO24', callback_data='GPIO24OFF')],
+                    [InlineKeyboardButton(text='OFF GPIO23', callback_data='GPIO23OFF')],
+                    
+                    [InlineKeyboardButton(text='Temperatura 1', callback_data='temp1'),
+                    InlineKeyboardButton(text='Temperatura 2', callback_data='temp2')],
+                    
+                    [InlineKeyboardButton(text='Tensioni', callback_data='volts')],
+                    
+                    #[InlineKeyboardButton(text='Ora', callback_data='time')],
+
+                    
+                    ])
+        
+        bot.sendMessage(chat_id, 'Ciao %s, usa la tastiera online'%name, reply_markup=keyboard)
+        
+  
+def on_callback_query(msg):
+    query_id, chat_id, query_data = telepot.glance(msg, flavor='callback_query')
+    print('Callback Query:', query_id, chat_id, query_data)
+
+#stato GPIO da tastiera    
+    if query_data =='GPIO17':
+        bot.sendMessage(chat_id, 'Ecco lo stato del relè 17:')
+        bot.sendMessage(chat_id, GPIO.input(GPIO17))
+    elif query_data=='GPIO18':
+        bot.sendMessage(chat_id, 'Ecco lo stato del relè 18:')
+        bot.sendMessage(chat_id, GPIO.input(GPIO18))
+    elif query_data=='GPIO25':
+        bot.sendMessage(chat_id, 'Ecco lo stato del relè 25:')
+        bot.sendMessage(chat_id, GPIO.input(GPIO25))
+    elif query_data=='GPIO24':
+        bot.sendMessage(chat_id, 'Ecco lo stato del relè 24:')
+        bot.sendMessage(chat_id, GPIO.input(GPIO24))
+    elif query_data=='GPIO23':
+        bot.sendMessage(chat_id, 'Ecco lo stato del relè 23:')
+        bot.sendMessage(chat_id, GPIO.input(GPIO23))
+
+#attivazione GPIO da tastiera
+    elif query_data =='GPIO17ON':
+        bot.sendMessage(chat_id, 'Hai attivato il relè 17')
+        bot.sendMessage(chat_id, GPIO.output(GPIO17,GPIO.HIGH))
+    elif query_data=='GPIO18ON':
+        bot.sendMessage(chat_id, 'Hai attivato il relè 18')
+        bot.sendMessage(chat_id, GPIO.output(GPIO18,GPIO.HIGH))
+    elif query_data=='GPIO25ON':
+        bot.sendMessage(chat_id, 'Hai attivato il relè 25')
+        bot.sendMessage(chat_id, GPIO.output(GPIO25,GPIO.HIGH))
+    elif query_data=='GPIO24ON':
+        bot.sendMessage(chat_id, 'Hai attivato il relè 24')
+        bot.sendMessage(chat_id, GPIO.output(GPIO24,GPIO.HIGH))
+    elif query_data=='GPIO23ON':
+        bot.sendMessage(chat_id, 'Hai attivato il relè 23')
+        bot.sendMessage(chat_id, GPIO.output(GPIO23,GPIO.HIGH))
+        
+#disattivazione GPIO da tastiera       
+    elif query_data =='GPIO17OFF':
+        bot.sendMessage(chat_id, 'Hai disattivato il relè 17')
+        bot.sendMessage(chat_id, GPIO.output(GPIO17,GPIO.LOW))
+    elif query_data=='GPIO18OFF':
+        bot.sendMessage(chat_id, 'Hai disattivato il relè 18')
+        bot.sendMessage(chat_id, GPIO.output(GPIO18,GPIO.LOW))
+    elif query_data=='GPIO25OFF':
+        bot.sendMessage(chat_id, 'Hai disattivato il relè 25')
+        bot.sendMessage(chat_id, GPIO.output(GPIO25,GPIO.LOW))
+    elif query_data=='GPIO24OFF':
+        bot.sendMessage(chat_id, 'Hai disattivato il relè 24')
+        bot.sendMessage(chat_id, GPIO.output(GPIO24,GPIO.LOW))
+    elif query_data=='GPIO23OFF':
+        bot.sendMessage(chat_id, 'Hai disattivato il relè 23')
+        bot.sendMessage(chat_id, GPIO.output(GPIO23,GPIO.LOW))
+        
+        
+#lettura temperatura da tastiera telegram
+    elif query_data=='temp1':
+        bot.sendMessage(chat_id, 'Ecco la temperatura della sonda 1:')
+        bot.sendMessage(chat_id, read_temp('28-000001393c1f'))
+
+ 
+    elif query_data=='temp2':
+        bot.sendMessage(chat_id, 'Ecco la temperatura della sonda 2:')
+        bot.sendMessage(chat_id, read_temp('28-00000138f069'))
+
+#lettura tensione da tastiera telegram
+    
+    elif query_data=='volts':
+        valori = [0.0, 0.0, 0.0, 0.0]
+        for i in range(4):
+            valori[i] = mcp.read_adc(i)
+        
+        VALORI[0] = round(((valori[0] * VAL_TENSIONE) / 999), 1)
+        VALORI[1] = round(((valori[1] * VAL_TENSIONE) / 999), 1)
+        VALORI[2] = round(((valori[2] * VAL_TENSIONE) / 999), 1)
+        VALORI[3] = round(((valori[3] * VAL_TENSIONE) / 999), 1)
+        
+        bot.sendMessage(chat_id, 'Ecco la tensione 0:')
+        bot.sendMessage(chat_id, VALORI[0])
+        bot.sendMessage(chat_id, 'Ecco la tensione 1:')
+        bot.sendMessage(chat_id, VALORI[1])
+        bot.sendMessage(chat_id, 'Ecco la tensione 2:')
+        bot.sendMessage(chat_id, VALORI[2])
+        bot.sendMessage(chat_id, 'Ecco la tensione 3:')
+        bot.sendMessage(chat_id, VALORI[3])
+        
+#data e ora con tastiera telegram        
+        
+    #elif query_data=='time':
+     #   ts = time.time()
+      #  bot.answerCallbackQuery(query_id, text=datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')) #messaggio a comparsa
+ 
+ 
+bot = telepot.Bot(TOKEN)
+MessageLoop(bot, {'chat': on_chat_message,
+                  'callback_query': on_callback_query}).run_as_thread() 
+
+
+#bot = telepot.Bot(TOKEN)
+#bot.message_loop(on_chat_message)
+
+
+def bot_cb(pin):
+    print('il pin {} ha cambiato stato'.format(pin))
+    bot.sendMessage(admin_id, 'Ingresso {} ha cambiato stato'.format(pin))
+
+GPIO.add_event_detect(GPIO21, GPIO.FALLING, bot_cb, bouncetime=1000)
+GPIO.add_event_detect(GPIO16, GPIO.FALLING, bot_cb, bouncetime=1000)
+GPIO.add_event_detect(GPIO12, GPIO.FALLING, bot_cb, bouncetime=1000)
+GPIO.add_event_detect(GPIO7, GPIO.FALLING, bot_cb, bouncetime=1000)
+GPIO.add_event_detect(GPIO20, GPIO.FALLING, bot_cb, bouncetime=1000)
+
+
+if __name__ == "__main__":
+   app.secret_key = os.urandom(12)
+   app.run(host='0.0.0.0', port=80, debug=False)
+   
